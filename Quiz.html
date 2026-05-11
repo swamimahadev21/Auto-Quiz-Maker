@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto MCQ Quiz Generator</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Smooth transitions for a premium feel */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom radio button styling */
+        input[type="radio"] { accent-color: #3b82f6; width: 1.2rem; height: 1.2rem; cursor: pointer; }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col items-center py-10 px-4">
+
+    <!-- Main Container -->
+    <div class="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-slate-800 text-white p-6 flex justify-between items-center relative">
+            <div class="text-center w-full">
+                <h1 class="text-3xl font-bold mb-2"><i class="fa-solid fa-bolt text-yellow-400 mr-2"></i> Auto Quiz Maker</h1>
+                <p class="text-slate-300">Turn simple text into an interactive, graded quiz instantly.</p>
+            </div>
+            <button onclick="showHistory()" class="absolute right-6 top-6 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-bold transition shadow hidden md:block">
+                <i class="fa-solid fa-clock-rotate-left mr-1"></i> History
+            </button>
+        </div>
+
+        <!-- Section 1: The Input Area (Where you paste text) -->
+        <div id="setup-section" class="p-6 md:p-8 fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Instructions / Format Guide -->
+                <div class="col-span-1 bg-blue-50 p-5 rounded-xl border border-blue-100 flex flex-col h-full">
+                    <h2 class="font-bold text-blue-800 text-lg mb-3"><i class="fa-solid fa-circle-info mr-2"></i> How to Format</h2>
+                    <p class="text-sm text-slate-600 mb-4">To make sure the system understands your questions, type them exactly like this:</p>
+                    
+                    <div class="bg-white p-3 rounded border border-slate-200 text-sm font-mono text-slate-700 mb-4">
+                        Question: [Your question here]<br>
+                        A. [Option 1]<br>
+                        B. [Option 2]<br>
+                        C. [Option 3]<br>
+                        D. [Option 4]<br>
+                        Answer: [A, B, C, or D]
+                    </div>
+                    
+                    <p class="text-sm text-slate-600 mt-auto">Make sure to leave an empty line between different questions!</p>
+                </div>
+
+                <!-- Text Input Area -->
+                <div class="col-span-1 md:col-span-2 flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="font-bold text-slate-700 text-lg">Paste your questions here:</label>
+                        <button onclick="clearText()" class="text-sm text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i> Clear</button>
+                    </div>
+                    <textarea id="raw-text" class="w-full h-80 p-4 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:ring-0 outline-none resize-none font-mono text-sm shadow-inner mb-4" placeholder="Paste your formatted questions here..."></textarea>
+                    
+                    <!-- Error Message Box (Hidden by default) -->
+                    <div id="error-box" class="hidden bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm font-semibold">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> <span id="error-message"></span>
+                    </div>
+
+                    <button onclick="generateQuiz()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 text-lg">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Create My Quiz
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: The Quiz Playing Area -->
+        <div id="quiz-section" class="p-6 md:p-8 hidden fade-in">
+            <div class="flex justify-between items-center border-b pb-4 mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">Good Luck!</h2>
+                <button onclick="goBack()" class="text-slate-500 hover:text-slate-800 font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Edit Questions</button>
+            </div>
+            
+            <div id="quiz-container" class="space-y-8">
+                <!-- Quiz questions will be injected here automatically -->
+            </div>
+
+            <div class="mt-8 border-t pt-6">
+                <button onclick="submitQuiz()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 text-lg">
+                    <i class="fa-solid fa-check-double mr-2"></i> Submit & Get Marks
+                </button>
+            </div>
+        </div>
+
+        <!-- Section 3: The Results Area -->
+        <div id="result-section" class="p-6 md:p-8 hidden fade-in">
+            <div class="text-center mb-8 border-b pb-8">
+                <h2 class="text-4xl font-bold text-slate-800 mb-2">Quiz Completed!</h2>
+                <p class="text-lg text-slate-600 mb-4">Here is how you performed:</p>
+                
+                <!-- Score Display Box -->
+                <div class="inline-block bg-slate-100 rounded-2xl p-6 shadow-inner border-2 border-slate-200">
+                    <div class="text-6xl font-black text-blue-600" id="score-display">0/0</div>
+                    <div class="text-slate-500 font-bold mt-2 tracking-wide uppercase">Total Marks</div>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-bold text-slate-800 mb-6"><i class="fa-solid fa-magnifying-glass mr-2"></i> Review Your Answers:</h3>
+            <div id="review-container" class="space-y-6">
+                <!-- Answer review boxes will be injected here -->
+            </div>
+
+            <div class="mt-10 flex justify-center">
+                <button onclick="goBack()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition duration-200">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> Create Another Quiz
+                </button>
+            </div>
+        </div>
+
+        <!-- Section 4: History Area -->
+        <div id="history-section" class="p-6 md:p-8 hidden fade-in">
+            <div class="flex justify-between items-center border-b pb-4 mb-6">
+                <h2 class="text-2xl font-bold text-slate-800"><i class="fa-solid fa-clock-rotate-left text-blue-500 mr-2"></i> Your Past Quizzes</h2>
+                <button onclick="goBack()" class="text-slate-500 hover:text-slate-800 font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Back to Maker</button>
+            </div>
+            <div id="history-container" class="space-y-4">
+                <p class="text-slate-500 text-center italic">Loading your history securely...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Setup for Secure Storage
+        let auth, db, currentUser;
+        let pastQuizzes = [];
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        if (typeof __firebase_config !== 'undefined') {
+            const firebaseConfig = JSON.parse(__firebase_config);
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            const initAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Auth Error:", error);
+                }
+            };
+            initAuth();
+
+            onAuthStateChanged(auth, (user) => {
+                currentUser = user;
+                if (user) loadHistory();
+            });
+        }
+
+        function loadHistory() {
+            if (!currentUser || !db) return;
+            const historyRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'quiz_history');
+            
+            onSnapshot(historyRef, (snapshot) => {
+                pastQuizzes = [];
+                snapshot.forEach((doc) => pastQuizzes.push({ id: doc.id, ...doc.data() }));
+                // Sort by newest first
+                pastQuizzes.sort((a, b) => b.timestamp - a.timestamp);
+                renderHistory();
+            }, (error) => console.error("Error loading history:", error));
+        }
+
+        async function saveQuizResult(score, total) {
+            if (!currentUser || !db) return;
+            const historyRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'quiz_history');
+            try {
+                await addDoc(historyRef, {
+                    score: score,
+                    total: total,
+                    timestamp: Date.now(),
+                    dateString: new Date().toLocaleString()
+                });
+            } catch (error) {
+                console.error("Error saving result:", error);
+            }
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            if (pastQuizzes.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-center italic">No past quizzes found. Take one to save your score!</p>';
+                return;
+            }
+
+            pastQuizzes.forEach(quiz => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center";
+                
+                const percentage = Math.round((quiz.score / quiz.total) * 100) || 0;
+                let colorClass = percentage >= 80 ? "text-green-500" : (percentage >= 50 ? "text-yellow-500" : "text-red-500");
+
+                card.innerHTML = `
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium mb-1"><i class="fa-regular fa-calendar mr-1"></i> ${quiz.dateString}</p>
+                        <p class="text-slate-800 font-bold">Training Assessment</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-black ${colorClass}">${quiz.score}/${quiz.total}</div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">Score</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Expose functions to window (Required because type="module" limits scope)
+        window.generateQuiz = generateQuiz;
+        window.submitQuiz = submitQuiz;
+        window.goBack = goBack;
+        window.clearText = clearText;
+        window.showHistory = showHistory;
+
+        function showHistory() {
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('quiz-section').classList.add('hidden');
+            document.getElementById('result-section').classList.add('hidden');
+            document.getElementById('history-section').classList.remove('hidden');
+        }
+
+        
+
+        // Load default text into the text area when the page opens
+        document.getElementById('raw-text').value = defaultText;
+
+        // Variables to store our data
+        let questionsData = []; // This will hold the parsed questions
+        let userAnswers = {};   // This will hold the answers the user picks
+
+        // Function 1: Read the text and turn it into data
+        function generateQuiz() {
+            const rawText = document.getElementById('raw-text').value;
+            const errorBox = document.getElementById('error-box');
+            const errorMsg = document.getElementById('error-message');
+            
+            // Hide error box initially
+            errorBox.classList.add('hidden');
+            
+            // Clear old data
+            questionsData = [];
+            userAnswers = {};
+
+            // Split the big text into individual lines
+            const lines = rawText.split('\n');
+            let currentQuestion = null;
+
+            // Loop through every line to find the pieces (Question, Options, Answer)
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                
+                // Skip empty lines
+                if (line === '') continue;
+
+                // Check if the line starts with "Question:"
+                if (line.toLowerCase().startsWith('question:')) {
+                    // If we were already building a question, save it before starting a new one
+                    if (currentQuestion && currentQuestion.correctAnswer) {
+                        questionsData.push(currentQuestion);
+                    }
+                    // Start a new fresh question object
+                    currentQuestion = {
+                        text: line.substring(9).trim(), // Get text after "Question:"
+                        options: {},
+                        correctAnswer: null
+                    };
+                } 
+                // Check if the line is an option (A., B., C., D.)
+                else if (currentQuestion && /^[A-D]\./i.test(line)) {
+                    const letter = line.charAt(0).toUpperCase(); // Get 'A', 'B', etc.
+                    const optionText = line.substring(2).trim(); // Get the text after the dot
+                    currentQuestion.options[letter] = optionText;
+                }
+                // Check if the line is the answer (Answer: B)
+                else if (currentQuestion && line.toLowerCase().startsWith('answer:')) {
+                    currentQuestion.correctAnswer = line.substring(7).trim().toUpperCase();
+                }
+                // If it's just normal text and we are building a question text, attach it
+                else if (currentQuestion && Object.keys(currentQuestion.options).length === 0) {
+                    currentQuestion.text += " " + line;
+                }
+            }
+
+            // Don't forget to save the very last question!
+            if (currentQuestion && currentQuestion.correctAnswer) {
+                questionsData.push(currentQuestion);
+            }
+
+            // Security Check: Did we actually find any valid questions?
+            if (questionsData.length === 0) {
+                errorMsg.innerText = "Could not find any correctly formatted questions. Please check the 'How to Format' guide and try again.";
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            // If successful, draw the quiz UI
+            buildQuizUI();
+            
+            // Switch screens
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('quiz-section').classList.remove('hidden');
+        }
+
+        // Function 2: Draw the quiz HTML on the screen
+        function buildQuizUI() {
+            const container = document.getElementById('quiz-container');
+            container.innerHTML = ''; // Clear old HTML
+
+            // Loop through the data and create HTML for each question
+            questionsData.forEach((q, index) => {
+                // Create a box for the question
+                const qBox = document.createElement('div');
+                qBox.className = "bg-white p-6 rounded-xl border border-slate-200 shadow-sm";
+
+                // Add the Question text
+                const qTitle = document.createElement('h3');
+                qTitle.className = "text-lg font-bold text-slate-800 mb-4";
+                qTitle.innerText = `${index + 1}. ${q.text}`;
+                qBox.appendChild(qTitle);
+
+                // Add the options (A, B, C, D)
+                const optionsGrid = document.createElement('div');
+                optionsGrid.className = "space-y-3";
+
+                // Loop through A, B, C, D
+                for (const [letter, text] of Object.entries(q.options)) {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center p-3 rounded-lg border border-slate-200 hover:bg-blue-50 cursor-pointer transition";
+                    
+                    const radioInput = document.createElement('input');
+                    radioInput.type = "radio";
+                    radioInput.name = `question_${index}`; // Group them by question number
+                    radioInput.value = letter;
+                    radioInput.className = "mr-3";
+                    
+                    // When user clicks, save their answer
+                    radioInput.onchange = (e) => {
+                        userAnswers[index] = e.target.value;
+                    };
+
+                    const spanText = document.createElement('span');
+                    spanText.className = "text-slate-700 font-medium";
+                    spanText.innerText = `${letter}. ${text}`;
+
+                    label.appendChild(radioInput);
+                    label.appendChild(spanText);
+                    optionsGrid.appendChild(label);
+                }
+
+                qBox.appendChild(optionsGrid);
+                container.appendChild(qBox);
+            });
+        }
+
+        // Function 3: Check the answers and calculate marks
+        function submitQuiz() {
+            let score = 0;
+            const reviewContainer = document.getElementById('review-container');
+            reviewContainer.innerHTML = ''; // Clear old review
+
+            // Loop through and grade each question
+            questionsData.forEach((q, index) => {
+                const userAnswer = userAnswers[index];
+                const isCorrect = userAnswer === q.correctAnswer;
+
+                if (isCorrect) score++;
+
+                // Build the visual review for this question
+                const reviewBox = document.createElement('div');
+                reviewBox.className = `p-5 rounded-xl border-l-4 ${isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`;
+
+                // Mark text as Correct or Wrong
+                let statusBadge = isCorrect 
+                    ? `<span class="bg-green-500 text-white px-2 py-1 rounded text-xs font-bold uppercase"><i class="fa-solid fa-check"></i> Correct</span>`
+                    : `<span class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold uppercase"><i class="fa-solid fa-xmark"></i> Wrong</span>`;
+
+                let htmlContent = `
+                    <div class="flex justify-between items-start mb-3">
+                        <h4 class="font-bold text-slate-800 pr-4">${index + 1}. ${q.text}</h4>
+                        ${statusBadge}
+                    </div>
+                    <div class="text-sm space-y-1">
+                `;
+
+                // Show what they selected and what the right answer is
+                if (isCorrect) {
+                    htmlContent += `<p class="text-green-700 font-semibold"><i class="fa-regular fa-circle-check mr-1"></i> Your Answer: ${userAnswer}. ${q.options[userAnswer]}</p>`;
+                } else {
+                    if (userAnswer) {
+                        htmlContent += `<p class="text-red-600 font-semibold strike-through"><i class="fa-regular fa-circle-xmark mr-1"></i> Your Answer: ${userAnswer}. ${q.options[userAnswer]}</p>`;
+                    } else {
+                        htmlContent += `<p class="text-slate-500 font-medium"><i class="fa-solid fa-minus mr-1"></i> You skipped this question.</p>`;
+                    }
+                    htmlContent += `<p class="text-green-700 font-bold mt-1"><i class="fa-solid fa-arrow-right mr-1"></i> Correct Answer: ${q.correctAnswer}. ${q.options[q.correctAnswer]}</p>`;
+                }
+
+                htmlContent += `</div>`;
+                reviewBox.innerHTML = htmlContent;
+                reviewContainer.appendChild(reviewBox);
+            });
+
+            // Update the big score text
+            document.getElementById('score-display').innerText = `${score}/${questionsData.length}`;
+
+            // Automatically save this result securely
+            saveQuizResult(score, questionsData.length);
+
+            // Switch screens
+            document.getElementById('quiz-section').classList.add('hidden');
+            document.getElementById('result-section').classList.remove('hidden');
+        }
+
+        // Helper function to go back to the text input screen
+        function goBack() {
+            document.getElementById('quiz-section').classList.add('hidden');
+            document.getElementById('result-section').classList.add('hidden');
+            document.getElementById('history-section').classList.add('hidden');
+            document.getElementById('setup-section').classList.remove('hidden');
+        }
+
+        // Helper function to clear the text area
+        function clearText() {
+            document.getElementById('raw-text').value = '';
+            document.getElementById('raw-text').focus();
+        }
+    </script>
+</body>
+</html>
