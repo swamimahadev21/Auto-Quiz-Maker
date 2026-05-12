@@ -242,7 +242,27 @@
             document.getElementById('history-section').classList.remove('hidden');
         }
 
-        
+        // Default text pre-filled with Cyber Security & Defence topics!
+        const defaultText = `Question: What is the main purpose of a "Firewall" in cyber security?
+A. To prevent computers from overheating
+B. To act as a barrier against unauthorized network access
+C. To permanently delete old files
+D. To boost internet download speeds
+Answer: B
+
+Question: In the military, what does "UAV" stand for?
+A. Unmanned Aerial Vehicle
+B. Universal Assault Van
+C. Underwater Attack Vessel
+D. United Armed Vanguard
+Answer: A
+
+Question: What is "Phishing" in the context of cyber threats?
+A. A naval training exercise
+B. Tricking people into revealing sensitive information like passwords
+C. Physically stealing a computer server
+D. Upgrading defense radar systems
+Answer: B`;
 
         // Load default text into the text area when the page opens
         document.getElementById('raw-text').value = defaultText;
