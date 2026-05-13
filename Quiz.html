@@ -51,7 +51,8 @@
                         B. [Option 2]<br>
                         C. [Option 3]<br>
                         D. [Option 4]<br>
-                        Answer: [A, B, C, or D]
+                        Answer: [A, B, C, or D]<br>
+                        Explanation: [Why this is the answer]
                     </div>
                     
                     <p class="text-sm text-slate-600 mt-auto">Make sure to leave an empty line between different questions!</p>
@@ -109,11 +110,24 @@
             </div>
 
             <h3 class="text-xl font-bold text-slate-800 mb-6"><i class="fa-solid fa-magnifying-glass mr-2"></i> Review Your Answers:</h3>
-            <div id="review-container" class="space-y-6">
-                <!-- Answer review boxes will be injected here -->
+            
+            <!-- One-by-One Review Container -->
+            <div id="review-container">
+                <!-- Single answer review will be injected here -->
             </div>
 
-            <div class="mt-10 flex justify-center">
+            <!-- Navigation Buttons for Review -->
+            <div id="review-nav" class="flex justify-between items-center mt-6 hidden">
+                <button id="prev-review-btn" onclick="changeReview(-1)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-6 rounded-lg transition duration-200">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Previous
+                </button>
+                <span id="review-counter" class="text-slate-500 font-bold"></span>
+                <button id="next-review-btn" onclick="changeReview(1)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">
+                    Next <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+
+            <div class="mt-12 border-t pt-8 flex justify-center">
                 <button onclick="goBack()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition duration-200">
                     <i class="fa-solid fa-rotate-right mr-2"></i> Create Another Quiz
                 </button>
@@ -234,6 +248,7 @@
         window.goBack = goBack;
         window.clearText = clearText;
         window.showHistory = showHistory;
+        window.changeReview = changeReview;
 
         function showHistory() {
             document.getElementById('setup-section').classList.add('hidden');
@@ -249,6 +264,7 @@ B. To act as a barrier against unauthorized network access
 C. To permanently delete old files
 D. To boost internet download speeds
 Answer: B
+Explanation: A firewall monitors and controls incoming and outgoing network traffic based on predetermined security rules, acting as a digital barrier between a trusted network and an untrusted one.
 
 Question: In the military, what does "UAV" stand for?
 A. Unmanned Aerial Vehicle
@@ -256,13 +272,15 @@ B. Universal Assault Van
 C. Underwater Attack Vessel
 D. United Armed Vanguard
 Answer: A
+Explanation: UAV stands for Unmanned Aerial Vehicle. They are commonly known as drones and are used for reconnaissance, surveillance, and combat missions without a human pilot onboard.
 
 Question: What is "Phishing" in the context of cyber threats?
 A. A naval training exercise
 B. Tricking people into revealing sensitive information like passwords
 C. Physically stealing a computer server
 D. Upgrading defense radar systems
-Answer: B`;
+Answer: B
+Explanation: Phishing is a social engineering attack where attackers impersonate a trusted entity in an email or message to deceive victims into handing over sensitive data like login credentials.`;
 
         // Load default text into the text area when the page opens
         document.getElementById('raw-text').value = defaultText;
@@ -270,6 +288,7 @@ Answer: B`;
         // Variables to store our data
         let questionsData = []; // This will hold the parsed questions
         let userAnswers = {};   // This will hold the answers the user picks
+        let currentReviewIndex = 0; // Tracks which review question is showing
 
         // Function 1: Read the text and turn it into data
         function generateQuiz() {
@@ -305,7 +324,8 @@ Answer: B`;
                     currentQuestion = {
                         text: line.substring(9).trim(), // Get text after "Question:"
                         options: {},
-                        correctAnswer: null
+                        correctAnswer: null,
+                        explanation: ""
                     };
                 } 
                 // Check if the line is an option (A., B., C., D.)
@@ -317,6 +337,14 @@ Answer: B`;
                 // Check if the line is the answer (Answer: B)
                 else if (currentQuestion && line.toLowerCase().startsWith('answer:')) {
                     currentQuestion.correctAnswer = line.substring(7).trim().toUpperCase();
+                }
+                // Check if the line is an explanation (Explanation: ...)
+                else if (currentQuestion && line.toLowerCase().startsWith('explanation:')) {
+                    currentQuestion.explanation = line.substring(12).trim();
+                }
+                // If we already found the answer, treat any following lines as part of the explanation
+                else if (currentQuestion && currentQuestion.correctAnswer) {
+                    currentQuestion.explanation = ((currentQuestion.explanation || "") + " " + line).trim();
                 }
                 // If it's just normal text and we are building a question text, attach it
                 else if (currentQuestion && Object.keys(currentQuestion.options).length === 0) {
@@ -395,51 +423,13 @@ Answer: B`;
             });
         }
 
-        // Function 3: Check the answers and calculate marks
+        // Function 3: Check answers, calculate score, and start review
         function submitQuiz() {
             let score = 0;
-            const reviewContainer = document.getElementById('review-container');
-            reviewContainer.innerHTML = ''; // Clear old review
 
-            // Loop through and grade each question
+            // Calculate final score
             questionsData.forEach((q, index) => {
-                const userAnswer = userAnswers[index];
-                const isCorrect = userAnswer === q.correctAnswer;
-
-                if (isCorrect) score++;
-
-                // Build the visual review for this question
-                const reviewBox = document.createElement('div');
-                reviewBox.className = `p-5 rounded-xl border-l-4 ${isCorrect ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`;
-
-                // Mark text as Correct or Wrong
-                let statusBadge = isCorrect 
-                    ? `<span class="bg-green-500 text-white px-2 py-1 rounded text-xs font-bold uppercase"><i class="fa-solid fa-check"></i> Correct</span>`
-                    : `<span class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold uppercase"><i class="fa-solid fa-xmark"></i> Wrong</span>`;
-
-                let htmlContent = `
-                    <div class="flex justify-between items-start mb-3">
-                        <h4 class="font-bold text-slate-800 pr-4">${index + 1}. ${q.text}</h4>
-                        ${statusBadge}
-                    </div>
-                    <div class="text-sm space-y-1">
-                `;
-
-                // Show what they selected and what the right answer is
-                if (isCorrect) {
-                    htmlContent += `<p class="text-green-700 font-semibold"><i class="fa-regular fa-circle-check mr-1"></i> Your Answer: ${userAnswer}. ${q.options[userAnswer]}</p>`;
-                } else {
-                    if (userAnswer) {
-                        htmlContent += `<p class="text-red-600 font-semibold strike-through"><i class="fa-regular fa-circle-xmark mr-1"></i> Your Answer: ${userAnswer}. ${q.options[userAnswer]}</p>`;
-                    } else {
-                        htmlContent += `<p class="text-slate-500 font-medium"><i class="fa-solid fa-minus mr-1"></i> You skipped this question.</p>`;
-                    }
-                    htmlContent += `<p class="text-green-700 font-bold mt-1"><i class="fa-solid fa-arrow-right mr-1"></i> Correct Answer: ${q.correctAnswer}. ${q.options[q.correctAnswer]}</p>`;
-                }
-
-                htmlContent += `</div>`;
-                reviewBox.innerHTML = htmlContent;
-                reviewContainer.appendChild(reviewBox);
+                if (userAnswers[index] === q.correctAnswer) score++;
             });
 
             // Update the big score text
@@ -451,6 +441,87 @@ Answer: B`;
             // Switch screens
             document.getElementById('quiz-section').classList.add('hidden');
             document.getElementById('result-section').classList.remove('hidden');
+
+            // Start the One-by-One Review
+            currentReviewIndex = 0;
+            document.getElementById('review-nav').classList.remove('hidden');
+            showReviewQuestion(currentReviewIndex);
+        }
+
+        // Feature 4: Display a single question in the review screen
+        function showReviewQuestion(index) {
+            const container = document.getElementById('review-container');
+            const q = questionsData[index];
+            const userAnswer = userAnswers[index];
+            const isCorrect = userAnswer === q.correctAnswer;
+
+            // Mark text as Correct or Wrong in the header
+            let statusBadge = isCorrect 
+                ? `<span class="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"><i class="fa-solid fa-check mr-1"></i> Correct</span>`
+                : `<span class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"><i class="fa-solid fa-xmark mr-1"></i> Wrong</span>`;
+
+            // Start building the HTML for this specific question
+            let htmlContent = `
+                <div class="bg-white p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm fade-in">
+                    <div class="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+                        <h4 class="font-bold text-slate-800 text-xl pr-4">Q${index + 1}. ${q.text}</h4>
+                        <div class="flex-shrink-0 mt-1">${statusBadge}</div>
+                    </div>
+                    <div class="space-y-3 mb-6">
+            `;
+
+            // Draw all options (A, B, C, D) and color them Green/Red
+            for (const [letter, text] of Object.entries(q.options)) {
+                let boxStyle = "bg-slate-50 border-slate-200 text-slate-700"; // Default styling
+                let iconHtml = `<span class="w-6 h-6 flex items-center justify-center bg-slate-200 text-slate-500 rounded text-sm font-bold mr-3">${letter}</span>`;
+
+                if (letter === q.correctAnswer) {
+                    // This is the correct answer -> Make it Green
+                    boxStyle = "bg-green-50 border-green-500 text-green-900 font-bold border-2";
+                    iconHtml = `<span class="w-6 h-6 flex items-center justify-center bg-green-500 text-white rounded text-sm font-bold mr-3"><i class="fa-solid fa-check"></i></span>`;
+                } else if (letter === userAnswer) {
+                    // User picked this, but it's wrong -> Make it Red
+                    boxStyle = "bg-red-50 border-red-500 text-red-900 border-2";
+                    iconHtml = `<span class="w-6 h-6 flex items-center justify-center bg-red-500 text-white rounded text-sm font-bold mr-3"><i class="fa-solid fa-xmark"></i></span>`;
+                }
+
+                htmlContent += `
+                    <div class="p-3 rounded-lg border ${boxStyle} flex items-center">
+                        ${iconHtml}
+                        <span>${text}</span>
+                    </div>
+                `;
+            }
+
+            htmlContent += `</div>`; // Close options list
+
+            // Add the Explanation box at the bottom
+            if (q.explanation) {
+                htmlContent += `
+                    <div class="mt-2 p-5 bg-blue-50 border border-blue-200 rounded-xl text-slate-800 text-sm shadow-inner">
+                        <p class="font-bold text-blue-900 mb-2 uppercase tracking-wide text-xs"><i class="fa-solid fa-lightbulb text-yellow-500 text-base mr-1"></i> Explanation</p>
+                        <p class="leading-relaxed text-base">${q.explanation}</p>
+                    </div>
+                `;
+            }
+
+            htmlContent += `</div>`; // Close Main Box
+            container.innerHTML = htmlContent;
+
+            // Update the Next/Previous Counter and Buttons
+            document.getElementById('review-counter').innerText = `Question ${index + 1} of ${questionsData.length}`;
+            
+            // Hide "Previous" if we are on the first question
+            document.getElementById('prev-review-btn').style.visibility = (index === 0) ? 'hidden' : 'visible';
+            
+            // Hide "Next" if we are on the last question
+            document.getElementById('next-review-btn').style.visibility = (index === questionsData.length - 1) ? 'hidden' : 'visible';
+        }
+
+        // Function attached to the Next/Previous buttons
+        function changeReview(step) {
+            currentReviewIndex += step;
+            showReviewQuestion(currentReviewIndex);
         }
 
         // Helper function to go back to the text input screen
